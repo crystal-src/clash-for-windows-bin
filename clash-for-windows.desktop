@@ -1,9 +1,8 @@
 [Desktop Entry]
 Type=Application
-Version=pkgver
-Name=Clash For Windows
-Comment=Clash GUI
-Exec=/opt/clash-for-windows-bin/cfw
+Name=Clash for Windows
+Comment=Clash GUI based on Electron
+Exec=/usr/bin/cfw %U
 Icon=clash.png
 Terminal=false
 Keywords=clash

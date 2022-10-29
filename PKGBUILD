@@ -1,61 +1,52 @@
-# Maintainer: Shiroko <hhx.xxm at gmail.com>
-# Maintainer: Johnpoint <me at lvcshu.com>
+# Maintainer: Null Talisman <webmaster at raspii dot tech>
+# Contributor: Shiroko <hhx.xxm at gmail.com>
+# Contributor: Johnpoint <me at lvcshu.com>
+# Contributor: sukanka <su975853527 [AT] gmail.com>
 pkgname=clash-for-windows-bin
-pkgver=0.20.5
+pkgver=0.20.6
 pkgrel=1
 pkgdesc="A Windows/macOS/Linux GUI based on Clash and Electron."
-arch=("x86_64" "aarch64")
+arch=("x86_64")
 url="https://github.com/Fndroid/clash_for_windows_pkg"
-# logo_url="https://raw.githubusercontent.com/Dreamacro/clash/master/docs/logo.png"
-logo_url="https://cdn.jsdelivr.net/gh/Dreamacro/clash@master/docs/logo.png"
-install=clash-for-windows-bin.install
-
-depends=('libxss' 'gtk3')
-
+depends=('electron19')
 optdepends=(
-    'nftables: TUN mode required.'
-    'iproute2: TUN mode required.'
+    'nftables: Required for TUN mode.'
+    'iproute2: Required for TUN mode.'
 )
-
+makedepends=('asar' 'npm')
 source=(
-    "clash.png::${logo_url}"
+    "${url}/releases/download/${pkgver}/Clash.for.Windows-${pkgver}-x64-linux.tar.gz"
     "clash-for-windows.desktop"
     "cfw"
-    )
-
-source_x86_64=(
-    "${pkgname}-${pkgver}-x86_64-linux.tar.gz::${url}/releases/download/${pkgver}/Clash.for.Windows-${pkgver}-x64-linux.tar.gz"
-    )
-
-source_aarch64=(
-    "${pkgname}-${pkgver}-aarch64-linux.tar.gz::${url}/releases/download/${pkgver}/Clash.for.Windows-${pkgver}-arm64-linux.tar.gz"
-    )
-
-sha256sums=('0d48a2ea1ee05ad4579b6e6996889548fa8a61a5ff6c85a32f7622cddfcb5782'
-            'a2997f604a486e264f6fc5344164ae9e1a9a01282006a41784dd181f7d1a2913'
-            '4c0a9de624905e3717b0dd4effa24fbf5c79ad28221b3b3b15a4a0aca4d47e03')
-sha256sums_x86_64=('df597d26b22fdd03fe252299afbb8ab73a7762e46a20eb9947adf94295d56de9')
-sha256sums_aarch64=('73948e1f5ca70b15193d47ce82161bf929192e671ad7366eadc9d5ad80e98e6a')
-
-
-
-
+)
+sha256sums=('9d82d955f42044bd1db4e9bd1b2b69372d8d5ab65c5e84ae67aa121b1fd1ee94'
+            '7fff6aad3b8bf9ec9202739cd64c2d6b39de886911eb70c20499e4c8f4573a0f'
+            'fc0818c884052d0fdc83233fb5c26741aa4daa42d848979936a6e5a8217c676b')
+options=(!strip)
 
 build() {
-    # generate .desktop file
-    sed -i "s/pkgver/${pkgver}/" clash-for-windows.desktop
+    cd "Clash for Windows-${pkgver}-x64-linux"/resources/
+    asar e app.asar apps
+    cd apps
+    # fix for autostart and system electron
+    sed -i 's|r=n\[1\],|r="cfw\\nIcon=clash\\n",|g' dist/electron/renderer.js
+    # hide ads
+    sed -i 's|e._v("Advertisement"|e._v(""|g' dist/electron/renderer.js
+    sed -i 's|staticClass:"ad-img-list"|staticClass:""|g' dist/electron/renderer.js
+    sed -i 's|staticClass:"ad-img"|staticClass:""|g' dist/electron/renderer.js
+    sed -i 's|"lazy-image-view"|""|g' dist/electron/renderer.js
+    # rebuild
+    sed -i 's|"electron-log": "^4.1.0",|"electron-log": "^4.4.6",|g' package.json
+    rm -rf node_modules && HOME=${srcdir} npm install
+    cd ..
+    asar p apps cfw.asar
 }
 
 package() {
-    local parch=$(echo ${CARCH} | sed "s/x86_64/x64/;s/aarch64/arm64/")
-    cd "Clash for Windows-${pkgver}-${parch}-linux"
-    echo "packaging resource files as 644"
-    find . -type f -not \( -name "cfw" -or -name "clash-linux" -or -name "clash-core-service" -or -name "chrome-sandbox" -or -name "*.sh" \) \
-        -exec install -Dm 644 {} "${pkgdir}/opt/${pkgname}"/{} \;
-    echo "packaging executable files as 755"
-    find . -type f \( -name "cfw" -or -name "clash-linux" -or -name "clash-core-service" -or -name "chrome-sandbox" -or -name "*.sh" \) \
-       -exec install -Dm 755 {} "${pkgdir}/opt/${pkgname}"/{} \;
-    install -Dm 755 ../cfw ${pkgdir}/usr/bin/cfw 
-    install -Dm 644 ../clash.png ${pkgdir}/usr/share/pixmaps/clash.png
-    install -Dm 644 ../clash-for-windows.desktop ${pkgdir}/usr/share/applications/clash-for-windows.desktop
+    cd "Clash for Windows-${pkgver}-x64-linux"
+    install -Dm644 resources/cfw.asar -t ${pkgdir}/usr/share/${pkgname%-bin}
+    cp -a --no-preserve=ownership resources/static ${pkgdir}/usr/share/${pkgname%-bin}/
+    install -Dm755 ../cfw -t ${pkgdir}/usr/bin
+    install -Dm644 ../clash-for-windows.desktop -t ${pkgdir}/usr/share/applications
+    install -Dm644 resources/apps/dist/electron/static/imgs/icon_512.png ${pkgdir}/usr/share/icons/hicolor/512x512/apps/clash.png
 }

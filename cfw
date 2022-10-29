@@ -1,2 +1,3 @@
-#!/bin/sh
-/opt/clash-for-windows-bin/cfw
+#!/bin/bash
+cd /usr/share/clash-for-windows
+electron19 cfw.asar "$@"
